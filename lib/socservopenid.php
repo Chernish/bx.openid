@@ -63,7 +63,7 @@ abstract class SocServOpenId extends CSocServAuth
     public const CONFIG_USE_LOGGING = 'use_logging';
     public const CONFIG_LOG_DIR = 'log_dir';
 
-    protected ?LoggerInterface $logger;
+    private ?LoggerInterface $openIdLogger;
     private ?OAuthTransport $transport;
     private ?SocServOpenIdHandlerInterface $handler;
 
@@ -138,7 +138,7 @@ abstract class SocServOpenId extends CSocServAuth
     ) {
         parent::__construct($userId);
         $this->transport = $transport;
-        $this->logger = $logger;
+        $this->openIdLogger = $logger;
     }
 
     /**
@@ -262,7 +262,7 @@ abstract class SocServOpenId extends CSocServAuth
         try {
             $this->unsafeAuthorize($backUrl);
         } catch (Throwable $exception) {
-            $this->logger?->error($exception);
+            $this->openIdLogger?->error($exception);
             $handler = static::getHandler();
             if (empty($handler)) {
                 $this->closeWindowWithException($backUrl, $exception);
@@ -495,15 +495,15 @@ abstract class SocServOpenId extends CSocServAuth
 
     private function getLogger(): ?LoggerInterface
     {
-        if (empty($this->logger) && $this->needLogging()) {
+        if (empty($this->openIdLogger) && $this->needLogging()) {
             $logDir = $this->getLogDir() ?? '/upload/logs/auth';
-            $this->logger = new SimpleTextLogger(
+            $this->openIdLogger = new SimpleTextLogger(
                 Application::getDocumentRoot() . $logDir . '/openid_' . date('Y-m-d').'.log',
                 'Y/m/d H:i:s',
                 "{date} {level}: {message}"
             );
         }
-        return $this->logger;
+        return $this->openIdLogger;
     }
 
     /**
@@ -577,7 +577,7 @@ abstract class SocServOpenId extends CSocServAuth
     {
         $parameters->applicationId = static::getClientId();
         $parameters->applicationSecret = static::getClientSecret();
-        $parameters->redirectUrl = static::getRedirectUrl();
+        $parameters->redirectUrl = static::getConfigRedirectUrl();
         $parameters->scope = static::getScope();
     }
 
@@ -591,7 +591,7 @@ abstract class SocServOpenId extends CSocServAuth
         return (string) static::GetOption(static::CONFIG_CLIENT_SECRET);
     }
 
-    private static function getRedirectUrl(): string
+    private static function getConfigRedirectUrl(): string
     {
         return (string) static::GetOption(static::CONFIG_URL_REDIRECT);
     }
@@ -661,12 +661,12 @@ abstract class SocServOpenId extends CSocServAuth
 
     public function getBackUrlFromState(?string $state = null, ?HttpRequest $request = null): ?string
     {
-        $state = $state ?: $this->getState($request);
+        $state = $state ?: $this->getStateFromRequest($request);
         $statePayload = StateService::getInstance()->getPayload($state) ?? [];
         return $statePayload['backurl'] ?? null;
     }
 
-    public function getState(?HttpRequest $request = null): ?string
+    public function getStateFromRequest(?HttpRequest $request = null): ?string
     {
         $request = $request ?? Context::getCurrent()->getRequest();
         $error = $request->get('state') ?: null;

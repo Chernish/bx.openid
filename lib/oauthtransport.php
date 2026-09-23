@@ -31,7 +31,7 @@ class OAuthTransport extends CSocServOAuthTransport
     private string $socServiceId;
     private ?ClientInterface $httpClient;
     private ?OAuthTransportHandlerInterface $authHandler;
-    private ?LoggerInterface $logger;
+    private ?LoggerInterface $openIdLogger;
 
     public function __construct(
         string $socServiceId,
@@ -51,7 +51,7 @@ class OAuthTransport extends CSocServOAuthTransport
         $this->mode = $mode === static::MODE_IMPLICIT_FLOW ? static::MODE_IMPLICIT_FLOW : static::MODE_CODE_FLOW;
         $this->authHandler = $authHandler;
         $this->httpClient = $httpClient;
-        $this->logger = $logger;
+        $this->openIdLogger = $logger;
     }
 
     public function setHandler(OAuthTransportHandlerInterface $authHandler): void
@@ -297,7 +297,7 @@ class OAuthTransport extends CSocServOAuthTransport
 
     private function logRequest(RequestInterface $request): void
     {
-        if (empty($this->logger)) {
+        if (empty($this->openIdLogger)) {
             return;
         }
 
@@ -311,7 +311,7 @@ class OAuthTransport extends CSocServOAuthTransport
 
     private function logResponse(ResponseInterface $response): void
     {
-        if (empty($this->logger)) {
+        if (empty($this->openIdLogger)) {
             return;
         }
 
@@ -326,6 +326,6 @@ class OAuthTransport extends CSocServOAuthTransport
 
     private function logMessage(string $message): void
     {
-        $this->logger?->info($message);
+        $this->openIdLogger?->info($message);
     }
 }
